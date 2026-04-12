@@ -1,17 +1,23 @@
-export { execute, testEnvironment, sessionCodec } from './server/index.js';
+import { execute, testEnvironment, sessionCodec } from './server/index.js';
+export { execute, testEnvironment, sessionCodec };
 export type { MnemoPayAdapterConfig, MnemoPaySession, ExecutionRecord } from './types.js';
 
 export const ADAPTER_TYPE = 'mnemopay';
+
+// Required by Paperclip's plugin-loader — must export createServerAdapter()
+export function createServerAdapter() {
+  return { execute, testEnvironment, type: ADAPTER_TYPE };
+}
 
 export const adapterInfo = {
   type: ADAPTER_TYPE,
   label: 'MnemoPay Agent Memory',
   description:
     'Injects Agent FICO behavioral scoring (300-850) and persistent memory into any Paperclip-managed agent. ' +
-    'FICO is computed from real execution history using five weighted components (payment history, utilization, ' +
-    'account age, diversity, fraud record). Optional MnemoPay server integration adds semantic memory recall. ' +
+    'FICO is computed from real execution history using five weighted components. ' +
+    'Optional MnemoPay server integration adds semantic memory recall. ' +
     'Built on @mnemopay/sdk — Apache 2.0.',
-  version: '0.2.0',
+  version: '0.3.0',
   homepage: 'https://getbizsuite.com/mnemopay/',
   models: [
     'claude-haiku-4-5-20251001',
@@ -29,41 +35,41 @@ export const adapterInfo = {
     mnemoPayServerUrl: {
       type: 'string' as const,
       label: 'MnemoPay Server URL (optional)',
-      description: 'URL of a running MnemoPay MCP server (e.g. http://localhost:3200). Enables persistent semantic memory recall across agents.',
+      description: 'URL of a running MnemoPay MCP server (e.g. http://localhost:3200). Enables persistent semantic memory recall.',
       required: false,
     },
     mnemoPayToken: {
       type: 'string' as const,
       label: 'MnemoPay Server Token (optional)',
-      description: 'Bearer token for the MnemoPay server. Check MNEMOPAY_MCP_TOKEN in your MnemoPay .env.',
+      description: 'Bearer token for the MnemoPay server (MNEMOPAY_MCP_TOKEN).',
       secret: true,
       required: false,
     },
     taskPrompt: {
       type: 'string' as const,
       label: 'Task Prompt',
-      description: 'Standing instruction for this agent. What should it do on each heartbeat?',
+      description: 'Standing instruction for this agent on each heartbeat.',
       required: false,
       multiline: true,
     },
     model: {
       type: 'string' as const,
       label: 'Model',
-      description: 'Claude model. Default: claude-haiku-4-5-20251001 (fastest).',
+      description: 'Claude model. Default: claude-haiku-4-5-20251001.',
       required: false,
       default: 'claude-haiku-4-5-20251001',
     },
     enableFicoGating: {
       type: 'boolean' as const,
       label: 'Enable FICO Gating',
-      description: 'Block execution if this agent\'s FICO score drops below the minimum threshold.',
+      description: "Block execution if this agent's FICO score drops below the minimum threshold.",
       required: false,
       default: false,
     },
     minFicoScore: {
       type: 'number' as const,
       label: 'Minimum FICO Score',
-      description: 'Agents below this score are blocked when FICO Gating is enabled. Range 300-850.',
+      description: 'Agents below this score are blocked when FICO Gating is on. Range 300-850.',
       required: false,
       default: 500,
     },

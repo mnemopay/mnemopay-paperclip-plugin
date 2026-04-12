@@ -1,6 +1,12 @@
-export { execute, testEnvironment, sessionCodec } from './server/index.js';
+import { execute, testEnvironment, sessionCodec } from './server/index.js';
+export { execute, testEnvironment, sessionCodec };
 export type { MnemoPayAdapterConfig, MnemoPaySession, ExecutionRecord } from './types.js';
 export declare const ADAPTER_TYPE = "mnemopay";
+export declare function createServerAdapter(): {
+    execute: typeof execute;
+    testEnvironment: typeof testEnvironment;
+    type: string;
+};
 export declare const adapterInfo: {
     type: string;
     label: string;
