@@ -1,0 +1,48 @@
+{
+  "name": "mnemopay-paperclip-plugin",
+  "version": "0.1.0",
+  "description": "Paperclip adapter that injects MnemoPay Agent FICO scoring and persistent behavioral memory into any Paperclip-managed agent",
+  "type": "module",
+  "license": "Apache-2.0",
+  "author": "Jerry Omiagbo <jerry@getbizsuite.com>",
+  "homepage": "https://getbizsuite.com/mnemopay/",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mnemopay/mnemopay-paperclip-plugin"
+  },
+  "keywords": [
+    "paperclip",
+    "mnemopay",
+    "agent-fico",
+    "ai-agent",
+    "behavioral-scoring",
+    "memory",
+    "audit-trail"
+  ],
+  "exports": {
+    ".": "./dist/index.js",
+    "./server": "./dist/server/index.js"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "npm run build"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.39.0",
+    "@mnemopay/sdk": "^1.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.7.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
