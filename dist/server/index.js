@@ -1,49 +1,64 @@
 import { executeWithMnemo } from './execute.js';
-// Deserialize MnemoPay session from Paperclip's sessionParams
+const SESSION_KEY = 'mnemo';
 function loadSession(ctx) {
-    const stored = ctx.runtime.sessionParams?.mnemo;
+    const stored = ctx.runtime.sessionParams?.[SESSION_KEY];
     return {
         agentId: stored?.agentId ?? ctx.agent.id,
         ficoScore: stored?.ficoScore ?? null,
-        memoryKeys: stored?.memoryKeys ?? [],
+        ficoRating: stored?.ficoRating ?? null,
+        trustLevel: stored?.trustLevel ?? null,
+        executionHistory: stored?.executionHistory ?? [],
+        memoryContext: stored?.memoryContext ?? '',
         executionCount: stored?.executionCount ?? 0,
         lastExecutedAt: stored?.lastExecutedAt ?? null,
+        createdAt: stored?.createdAt ?? new Date().toISOString(),
     };
 }
 export async function execute(ctx) {
     const session = loadSession(ctx);
     const { result, updatedSession } = await executeWithMnemo(ctx, session);
-    // Merge updated MnemoPay session back into sessionParams for next heartbeat
     return {
         ...result,
         sessionParams: {
             ...ctx.runtime.sessionParams,
-            mnemo: updatedSession,
+            [SESSION_KEY]: updatedSession,
         },
     };
 }
 export async function testEnvironment() {
     const checks = [];
-    // Check Anthropic API key
     const hasApiKey = !!process.env.ANTHROPIC_API_KEY;
     checks.push({
         label: 'ANTHROPIC_API_KEY set',
         ok: hasApiKey,
-        message: hasApiKey ? 'Found in environment' : 'Set ANTHROPIC_API_KEY or configure mnemoPayApiKey in agent settings',
+        message: hasApiKey ? 'Found in environment' : 'Set ANTHROPIC_API_KEY or configure anthropicApiKey in agent settings',
     });
-    // Check MnemoPay SDK is importable
     try {
         await import('@mnemopay/sdk');
-        checks.push({ label: '@mnemopay/sdk installed', ok: true });
+        checks.push({ label: '@mnemopay/sdk installed', ok: true, message: 'AgentCreditScore available' });
     }
     catch {
+        checks.push({ label: '@mnemopay/sdk installed', ok: false, message: 'Run: npm install @mnemopay/sdk' });
+    }
+    const mnemoUrl = process.env.MNEMOPAY_URL;
+    if (mnemoUrl) {
+        try {
+            const { MnemoPayClient } = await import('@mnemopay/sdk/client');
+            const client = new MnemoPayClient(mnemoUrl, process.env.MNEMOPAY_TOKEN);
+            const health = await client.health();
+            checks.push({ label: `MnemoPay server (${mnemoUrl})`, ok: health.status === 'ok', message: `mode: ${health.mode}` });
+        }
+        catch (e) {
+            checks.push({ label: `MnemoPay server (${mnemoUrl})`, ok: false, message: String(e) });
+        }
+    }
+    else {
         checks.push({
-            label: '@mnemopay/sdk installed',
-            ok: false,
-            message: 'Run: npm install @mnemopay/sdk',
+            label: 'MnemoPay server (optional)',
+            ok: true,
+            message: 'Not configured — FICO scoring works locally, memory persistence disabled. Set MNEMOPAY_URL to enable.',
         });
     }
-    // Check Node.js version
     const [major] = process.versions.node.split('.').map(Number);
     const nodeOk = major >= 20;
     checks.push({
@@ -51,26 +66,27 @@ export async function testEnvironment() {
         ok: nodeOk,
         message: nodeOk ? undefined : 'Upgrade Node.js to v20+',
     });
-    return {
-        ok: checks.every(c => c.ok),
-        details: checks,
-    };
+    return { ok: checks.every(c => c.ok), details: checks };
 }
-// Session codec — Paperclip uses this to serialize/deserialize state across heartbeats
+// Session codec — Paperclip calls these to persist state across heartbeats
 export const sessionCodec = {
-    serialize(session) {
-        return { mnemo: session };
+    encode(session) {
+        return { [SESSION_KEY]: session };
     },
-    deserialize(params) {
-        const mnemo = params?.mnemo;
-        if (!mnemo)
+    decode(params) {
+        const s = params?.[SESSION_KEY];
+        if (!s?.agentId)
             return null;
         return {
-            agentId: mnemo.agentId ?? '',
-            ficoScore: mnemo.ficoScore ?? null,
-            memoryKeys: mnemo.memoryKeys ?? [],
-            executionCount: mnemo.executionCount ?? 0,
-            lastExecutedAt: mnemo.lastExecutedAt ?? null,
+            agentId: s.agentId,
+            ficoScore: s.ficoScore ?? null,
+            ficoRating: s.ficoRating ?? null,
+            trustLevel: s.trustLevel ?? null,
+            executionHistory: s.executionHistory ?? [],
+            memoryContext: s.memoryContext ?? '',
+            executionCount: s.executionCount ?? 0,
+            lastExecutedAt: s.lastExecutedAt ?? null,
+            createdAt: s.createdAt ?? new Date().toISOString(),
         };
     },
 };

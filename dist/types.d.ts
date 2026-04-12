@@ -42,15 +42,30 @@ export interface ServerAdapterModule {
     execute(ctx: AdapterExecutionContext): Promise<AdapterExecutionResult>;
     testEnvironment?(): Promise<AdapterEnvironmentTestResult>;
 }
+export interface ExecutionRecord {
+    id: string;
+    amount: number;
+    status: 'completed' | 'failed' | 'blocked';
+    createdAt: string;
+    completedAt?: string;
+    reason: string;
+    riskScore?: number;
+}
 export interface MnemoPaySession {
     agentId: string;
     ficoScore: number | null;
-    memoryKeys: string[];
+    ficoRating: string | null;
+    trustLevel: string | null;
+    executionHistory: ExecutionRecord[];
+    memoryContext: string;
     executionCount: number;
     lastExecutedAt: string | null;
+    createdAt: string;
 }
 export interface MnemoPayAdapterConfig {
-    mnemoPayApiKey?: string;
+    anthropicApiKey?: string;
+    mnemoPayServerUrl?: string;
+    mnemoPayToken?: string;
     taskPrompt?: string;
     model?: string;
     enableFicoGating?: boolean;

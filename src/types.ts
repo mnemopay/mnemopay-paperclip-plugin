@@ -1,5 +1,4 @@
 // Paperclip adapter types — sourced from @paperclipai/adapter-utils interfaces
-// We inline these to avoid a hard dependency on the adapter-utils package version
 
 export interface AdapterExecutionContext {
   runId: string;
@@ -46,18 +45,35 @@ export interface ServerAdapterModule {
   testEnvironment?(): Promise<AdapterEnvironmentTestResult>;
 }
 
-// MnemoPay session state persisted across Paperclip heartbeats
+// One execution record — used by AgentCreditScore to compute FICO
+export interface ExecutionRecord {
+  id: string;
+  amount: number; // cost in USD (used as proxy for credit utilization)
+  status: 'completed' | 'failed' | 'blocked';
+  createdAt: string; // ISO string
+  completedAt?: string;
+  reason: string; // task key or prompt summary
+  riskScore?: number;
+}
+
+// MnemoPay session state persisted across Paperclip heartbeats via sessionParams
 export interface MnemoPaySession {
   agentId: string;
   ficoScore: number | null;
-  memoryKeys: string[];
+  ficoRating: string | null;
+  trustLevel: string | null;
+  executionHistory: ExecutionRecord[];
+  memoryContext: string; // last recalled memories, cached
   executionCount: number;
   lastExecutedAt: string | null;
+  createdAt: string;
 }
 
 // Config fields shown in Paperclip UI
 export interface MnemoPayAdapterConfig {
-  mnemoPayApiKey?: string;
+  anthropicApiKey?: string;
+  mnemoPayServerUrl?: string; // Optional: URL of running MnemoPay MCP server
+  mnemoPayToken?: string;     // Optional: Bearer token for MnemoPay server
   taskPrompt?: string;
   model?: string;
   enableFicoGating?: boolean;

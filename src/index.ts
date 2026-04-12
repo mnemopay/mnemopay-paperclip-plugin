@@ -1,6 +1,5 @@
-// Main adapter export — Paperclip loads this to discover adapter metadata
 export { execute, testEnvironment, sessionCodec } from './server/index.js';
-export type { MnemoPayAdapterConfig, MnemoPaySession } from './types.js';
+export type { MnemoPayAdapterConfig, MnemoPaySession, ExecutionRecord } from './types.js';
 
 export const ADAPTER_TYPE = 'mnemopay';
 
@@ -8,10 +7,11 @@ export const adapterInfo = {
   type: ADAPTER_TYPE,
   label: 'MnemoPay Agent Memory',
   description:
-    'Injects Agent FICO behavioral scoring and persistent memory into any Paperclip-managed agent. ' +
-    'Scores degrade on anomalous behavior and recover with consistent performance. ' +
+    'Injects Agent FICO behavioral scoring (300-850) and persistent memory into any Paperclip-managed agent. ' +
+    'FICO is computed from real execution history using five weighted components (payment history, utilization, ' +
+    'account age, diversity, fraud record). Optional MnemoPay server integration adds semantic memory recall. ' +
     'Built on @mnemopay/sdk — Apache 2.0.',
-  version: '0.1.0',
+  version: '0.2.0',
   homepage: 'https://getbizsuite.com/mnemopay/',
   models: [
     'claude-haiku-4-5-20251001',
@@ -19,24 +19,37 @@ export const adapterInfo = {
     'claude-opus-4-6',
   ],
   configSchema: {
-    mnemoPayApiKey: {
+    anthropicApiKey: {
       type: 'string' as const,
-      label: 'Anthropic API Key (optional)',
-      description: 'Overrides ANTHROPIC_API_KEY env var. Used to call Claude for task execution.',
+      label: 'Anthropic API Key',
+      description: 'Your Claude API key. Overrides ANTHROPIC_API_KEY env var.',
+      secret: true,
+      required: false,
+    },
+    mnemoPayServerUrl: {
+      type: 'string' as const,
+      label: 'MnemoPay Server URL (optional)',
+      description: 'URL of a running MnemoPay MCP server (e.g. http://localhost:3200). Enables persistent semantic memory recall across agents.',
+      required: false,
+    },
+    mnemoPayToken: {
+      type: 'string' as const,
+      label: 'MnemoPay Server Token (optional)',
+      description: 'Bearer token for the MnemoPay server. Check MNEMOPAY_MCP_TOKEN in your MnemoPay .env.',
       secret: true,
       required: false,
     },
     taskPrompt: {
       type: 'string' as const,
       label: 'Task Prompt',
-      description: 'The standing instruction for this agent. What should it do on each heartbeat?',
+      description: 'Standing instruction for this agent. What should it do on each heartbeat?',
       required: false,
       multiline: true,
     },
     model: {
       type: 'string' as const,
       label: 'Model',
-      description: 'Claude model to use. Defaults to claude-haiku-4-5-20251001 (fastest, cheapest).',
+      description: 'Claude model. Default: claude-haiku-4-5-20251001 (fastest).',
       required: false,
       default: 'claude-haiku-4-5-20251001',
     },
@@ -50,7 +63,7 @@ export const adapterInfo = {
     minFicoScore: {
       type: 'number' as const,
       label: 'Minimum FICO Score',
-      description: 'Agents with a FICO below this value will be blocked (only if FICO Gating is on).',
+      description: 'Agents below this score are blocked when FICO Gating is enabled. Range 300-850.',
       required: false,
       default: 500,
     },

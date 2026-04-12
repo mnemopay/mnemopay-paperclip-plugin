@@ -1,5 +1,5 @@
 export { execute, testEnvironment, sessionCodec } from './server/index.js';
-export type { MnemoPayAdapterConfig, MnemoPaySession } from './types.js';
+export type { MnemoPayAdapterConfig, MnemoPaySession, ExecutionRecord } from './types.js';
 export declare const ADAPTER_TYPE = "mnemopay";
 export declare const adapterInfo: {
     type: string;
@@ -9,7 +9,20 @@ export declare const adapterInfo: {
     homepage: string;
     models: string[];
     configSchema: {
-        mnemoPayApiKey: {
+        anthropicApiKey: {
+            type: "string";
+            label: string;
+            description: string;
+            secret: boolean;
+            required: boolean;
+        };
+        mnemoPayServerUrl: {
+            type: "string";
+            label: string;
+            description: string;
+            required: boolean;
+        };
+        mnemoPayToken: {
             type: "string";
             label: string;
             description: string;
