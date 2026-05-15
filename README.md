@@ -56,7 +56,7 @@ The adapter serializes session state (`ficoScore`, `memoryKeys`, `executionCount
 - **MnemoPay SDK**: https://getbizsuite.com/mnemopay/
 - **npm**: https://www.npmjs.com/package/@mnemopay/sdk
 - **GitHub**: https://github.com/mnemopay
-- **Contact**: jerry@getbizsuite.com
+- **Contact**: jeremiah@getbizsuite.com
 
 ---
 
