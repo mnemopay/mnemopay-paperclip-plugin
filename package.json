@@ -1,7 +1,7 @@
 {
   "name": "mnemopay-paperclip-plugin",
-  "version": "0.3.0",
-  "description": "Paperclip adapter that injects MnemoPay Agent FICO scoring and persistent behavioral memory into any Paperclip-managed agent",
+  "version": "0.4.0",
+  "description": "Paperclip adapter that injects MnemoPay Agent Credit Score (300-850, FICO-style behavioral scoring; not affiliated with Fair Isaac Corporation) and persistent behavioral memory into any Paperclip-managed agent",
   "type": "module",
   "license": "Apache-2.0",
   "author": "Jerry Omiagbo <jerry@getbizsuite.com>",
@@ -13,7 +13,7 @@
   "keywords": [
     "paperclip",
     "mnemopay",
-    "agent-fico",
+    "agent-credit-score",
     "ai-agent",
     "behavioral-scoring",
     "memory",

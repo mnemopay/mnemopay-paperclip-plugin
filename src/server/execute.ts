@@ -19,8 +19,8 @@ function makeMemoryClient(config: Record<string, unknown>): MnemoPayClient | nul
   return new MnemoPayClient(url, token);
 }
 
-// Compute real Agent FICO score from stored execution history
-function computeFico(session: MnemoPaySession): { score: number; rating: string; trustLevel: string } {
+// Compute real Agent Credit Score from stored execution history
+function computeAgentScore(session: MnemoPaySession): { score: number; rating: string; trustLevel: string } {
   if (session.executionHistory.length === 0) {
     return { score: 650, rating: 'good', trustLevel: 'standard' };
   }
@@ -56,28 +56,43 @@ export async function executeWithMnemo(
   const apiKey = (config.anthropicApiKey as string) || process.env.ANTHROPIC_API_KEY;
   const taskPrompt = (config.taskPrompt as string) || '';
   const model = (config.model as string) || MODEL_DEFAULT;
-  const enableFicoGating = (config.enableFicoGating as boolean) ?? false;
-  const minFicoScore = (config.minFicoScore as number) ?? 500;
+  // Accept new and legacy config field names; new names take precedence.
+  const enableScoreGating =
+    (config.enableScoreGating as boolean | undefined) ??
+    (config.enableFicoGating as boolean | undefined) ??
+    false;
+  const minAgentScore =
+    (config.minAgentScore as number | undefined) ??
+    (config.minFicoScore as number | undefined) ??
+    500;
 
   if (!apiKey) {
     await ctx.onLog('stderr', '[MnemoPay] No Anthropic API key — set ANTHROPIC_API_KEY or configure anthropicApiKey\n');
     return { result: { exitCode: 1 }, updatedSession: session };
   }
 
-  // Compute real FICO from execution history
-  const fico = computeFico(session);
-  const updatedFicoSession = { ...session, ficoScore: fico.score, ficoRating: fico.rating, trustLevel: fico.trustLevel };
+  // Compute real Agent Credit Score from execution history
+  const scored = computeAgentScore(session);
+  const updatedScoredSession = {
+    ...session,
+    agentScore: scored.score,
+    agentRating: scored.rating,
+    // legacy mirror (will be removed in v1.0.0)
+    ficoScore: scored.score,
+    ficoRating: scored.rating,
+    trustLevel: scored.trustLevel,
+  };
 
   await ctx.onLog('stdout',
-    `[MnemoPay] Agent FICO: ${fico.score} (${fico.rating}) · Trust: ${fico.trustLevel} · Runs: ${session.executionCount}\n`
+    `[MnemoPay] Agent Credit Score: ${scored.score} (${scored.rating}) · Trust: ${scored.trustLevel} · Runs: ${session.executionCount}\n`
   );
 
-  // FICO gating — block before any API calls
-  if (enableFicoGating && fico.score < minFicoScore) {
+  // Score gating — block before any API calls
+  if (enableScoreGating && scored.score < minAgentScore) {
     await ctx.onLog('stderr',
-      `[MnemoPay] Execution blocked — FICO ${fico.score} below minimum ${minFicoScore}\n`
+      `[MnemoPay] Execution blocked — Agent Credit Score ${scored.score} below minimum ${minAgentScore}\n`
     );
-    return { result: { exitCode: 2 }, updatedSession: updatedFicoSession };
+    return { result: { exitCode: 2 }, updatedSession: updatedScoredSession };
   }
 
   // Recall memories from MnemoPay server (if configured)
@@ -99,7 +114,7 @@ export async function executeWithMnemo(
     `Company: ${ctx.agent.companyId}.`,
     `Task key: ${ctx.runtime.taskKey ?? 'general'}.`,
     memoryContext ? `\n## Prior context (from MnemoPay memory)\n${memoryContext}` : '',
-    `\n## Agent trust profile\nFICO: ${fico.score}/850 (${fico.rating}) · Trust: ${fico.trustLevel}`,
+    `\n## Agent trust profile\nAgent Credit Score: ${scored.score}/850 (${scored.rating}) · Trust: ${scored.trustLevel}`,
     `\nRespond directly and concisely. Confirm actions taken. Explain blockers.`,
   ].filter(Boolean).join('\n');
 
@@ -150,7 +165,7 @@ export async function executeWithMnemo(
       }
     }
 
-    // Record this execution for FICO scoring
+    // Record this execution for Agent Credit Score
     const record: ExecutionRecord = {
       id: executionId,
       amount: costUsd,
@@ -162,13 +177,16 @@ export async function executeWithMnemo(
     };
 
     const newHistory = [...session.executionHistory, record].slice(-200); // keep last 200
-    const newFico = computeFico({ ...updatedFicoSession, executionHistory: newHistory });
+    const newScore = computeAgentScore({ ...updatedScoredSession, executionHistory: newHistory });
 
     const finalSession: MnemoPaySession = {
-      ...updatedFicoSession,
-      ficoScore: newFico.score,
-      ficoRating: newFico.rating,
-      trustLevel: newFico.trustLevel,
+      ...updatedScoredSession,
+      agentScore: newScore.score,
+      agentRating: newScore.rating,
+      // legacy mirror (will be removed in v1.0.0)
+      ficoScore: newScore.score,
+      ficoRating: newScore.rating,
+      trustLevel: newScore.trustLevel,
       executionHistory: newHistory,
       memoryContext,
       executionCount: session.executionCount + 1,
@@ -189,7 +207,7 @@ export async function executeWithMnemo(
     const msg = err instanceof Error ? err.message : String(err);
     await ctx.onLog('stderr', `[MnemoPay] Execution error: ${msg}\n`);
 
-    // Record failure for FICO scoring
+    // Record failure for Agent Credit Score
     const failRecord: ExecutionRecord = {
       id: executionId,
       amount: 0,
@@ -199,15 +217,18 @@ export async function executeWithMnemo(
       riskScore: 0.5,
     };
     const newHistory = [...session.executionHistory, failRecord].slice(-200);
-    const failFico = computeFico({ ...updatedFicoSession, executionHistory: newHistory });
+    const failScore = computeAgentScore({ ...updatedScoredSession, executionHistory: newHistory });
 
     return {
       result: { exitCode: 1 },
       updatedSession: {
-        ...updatedFicoSession,
-        ficoScore: failFico.score,
-        ficoRating: failFico.rating,
-        trustLevel: failFico.trustLevel,
+        ...updatedScoredSession,
+        agentScore: failScore.score,
+        agentRating: failScore.rating,
+        // legacy mirror (will be removed in v1.0.0)
+        ficoScore: failScore.score,
+        ficoRating: failScore.rating,
+        trustLevel: failScore.trustLevel,
         executionHistory: newHistory,
         executionCount: session.executionCount + 1,
         lastExecutedAt: new Date().toISOString(),

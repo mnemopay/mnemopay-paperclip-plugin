@@ -13,8 +13,8 @@ export const adapterInfo = {
   type: ADAPTER_TYPE,
   label: 'MnemoPay Agent Memory',
   description:
-    'Injects Agent FICO behavioral scoring (300-850) and persistent memory into any Paperclip-managed agent. ' +
-    'FICO is computed from real execution history using five weighted components. ' +
+    'Injects Agent Credit Score behavioral scoring (300-850, FICO-style; not affiliated with Fair Isaac Corporation) and persistent memory into any Paperclip-managed agent. ' +
+    'The score is computed from real execution history using five weighted components. ' +
     'Optional MnemoPay server integration adds semantic memory recall. ' +
     'Built on @mnemopay/sdk — Apache 2.0.',
   version: '0.3.0',
@@ -59,17 +59,33 @@ export const adapterInfo = {
       required: false,
       default: 'claude-haiku-4-5-20251001',
     },
-    enableFicoGating: {
+    enableScoreGating: {
       type: 'boolean' as const,
-      label: 'Enable FICO Gating',
-      description: "Block execution if this agent's FICO score drops below the minimum threshold.",
+      label: 'Enable Agent Credit Score Gating',
+      description: "Block execution if this agent's Agent Credit Score drops below the minimum threshold.",
       required: false,
       default: false,
     },
+    minAgentScore: {
+      type: 'number' as const,
+      label: 'Minimum Agent Credit Score',
+      description: 'Agents below this score are blocked when score gating is on. Range 300-850.',
+      required: false,
+      default: 500,
+    },
+    /** @deprecated Use enableScoreGating. Will be removed in v1.0.0. */
+    enableFicoGating: {
+      type: 'boolean' as const,
+      label: '[deprecated] Enable FICO Gating',
+      description: 'Deprecated alias for enableScoreGating. Will be removed in v1.0.0.',
+      required: false,
+      default: false,
+    },
+    /** @deprecated Use minAgentScore. Will be removed in v1.0.0. */
     minFicoScore: {
       type: 'number' as const,
-      label: 'Minimum FICO Score',
-      description: 'Agents below this score are blocked when FICO Gating is on. Range 300-850.',
+      label: '[deprecated] Minimum FICO Score',
+      description: 'Deprecated alias for minAgentScore. Will be removed in v1.0.0.',
       required: false,
       default: 500,
     },

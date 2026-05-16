@@ -11,10 +11,16 @@ const SESSION_KEY = 'mnemo';
 
 function loadSession(ctx: AdapterExecutionContext): MnemoPaySession {
   const stored = ctx.runtime.sessionParams?.[SESSION_KEY] as Partial<MnemoPaySession> | undefined;
+  // Prefer the new agentScore/agentRating; fall back to the legacy ficoScore/ficoRating
+  // for sessions persisted before v0.4.0.
+  const score = stored?.agentScore ?? stored?.ficoScore ?? null;
+  const rating = stored?.agentRating ?? stored?.ficoRating ?? null;
   return {
     agentId: stored?.agentId ?? ctx.agent.id,
-    ficoScore: stored?.ficoScore ?? null,
-    ficoRating: stored?.ficoRating ?? null,
+    agentScore: score,
+    agentRating: rating,
+    ficoScore: score,
+    ficoRating: rating,
     trustLevel: stored?.trustLevel ?? null,
     executionHistory: stored?.executionHistory ?? [],
     memoryContext: stored?.memoryContext ?? '',
@@ -67,7 +73,7 @@ export async function testEnvironment(): Promise<AdapterEnvironmentTestResult> {
     checks.push({
       label: 'MnemoPay server (optional)',
       ok: true,
-      message: 'Not configured — FICO scoring works locally, memory persistence disabled. Set MNEMOPAY_URL to enable.',
+      message: 'Not configured — Agent Credit Score works locally, memory persistence disabled. Set MNEMOPAY_URL to enable.',
     });
   }
 
@@ -90,10 +96,14 @@ export const sessionCodec = {
   decode(params: Record<string, unknown>): MnemoPaySession | null {
     const s = params?.[SESSION_KEY] as Partial<MnemoPaySession> | undefined;
     if (!s?.agentId) return null;
+    const score = s.agentScore ?? s.ficoScore ?? null;
+    const rating = s.agentRating ?? s.ficoRating ?? null;
     return {
       agentId: s.agentId,
-      ficoScore: s.ficoScore ?? null,
-      ficoRating: s.ficoRating ?? null,
+      agentScore: score,
+      agentRating: rating,
+      ficoScore: score,
+      ficoRating: rating,
       trustLevel: s.trustLevel ?? null,
       executionHistory: s.executionHistory ?? [],
       memoryContext: s.memoryContext ?? '',

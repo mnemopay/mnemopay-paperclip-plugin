@@ -45,7 +45,7 @@ export interface ServerAdapterModule {
   testEnvironment?(): Promise<AdapterEnvironmentTestResult>;
 }
 
-// One execution record — used by AgentCreditScore to compute FICO
+// One execution record — used by AgentCreditScore to compute the agent's credit score
 export interface ExecutionRecord {
   id: string;
   amount: number; // cost in USD (used as proxy for credit utilization)
@@ -56,10 +56,17 @@ export interface ExecutionRecord {
   riskScore?: number;
 }
 
-// MnemoPay session state persisted across Paperclip heartbeats via sessionParams
+// MnemoPay session state persisted across Paperclip heartbeats via sessionParams.
+// Both `agentScore`/`agentRating` and the legacy `ficoScore`/`ficoRating` fields are
+// written so previously-persisted sessions and any consumers reading the old names
+// continue to work. The legacy fields will be removed in v1.0.0.
 export interface MnemoPaySession {
   agentId: string;
+  agentScore: number | null;
+  agentRating: string | null;
+  /** @deprecated Use agentScore. Mirrored on write for back-compat. Removed in v1.0.0. */
   ficoScore: number | null;
+  /** @deprecated Use agentRating. Mirrored on write for back-compat. Removed in v1.0.0. */
   ficoRating: string | null;
   trustLevel: string | null;
   executionHistory: ExecutionRecord[];
@@ -76,6 +83,10 @@ export interface MnemoPayAdapterConfig {
   mnemoPayToken?: string;     // Optional: Bearer token for MnemoPay server
   taskPrompt?: string;
   model?: string;
+  enableScoreGating?: boolean;
+  minAgentScore?: number;
+  /** @deprecated Use enableScoreGating. Will be removed in v1.0.0. */
   enableFicoGating?: boolean;
+  /** @deprecated Use minAgentScore. Will be removed in v1.0.0. */
   minFicoScore?: number;
 }
